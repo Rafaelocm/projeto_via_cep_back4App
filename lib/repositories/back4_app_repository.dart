@@ -23,6 +23,14 @@ class Back4AppRepository{
     return ViaCepModelList.fromJson(response.data); 
   }
 
+  Future<void> updatingCep(ViaCepModel viaCepModel, String objectId) async{
+    var dio = Dio();
+    dio.options.headers["X-Parse-Application-Id"] = dotenv.get("BACK4APPAPLICATIONID");
+    dio.options.headers["X-Parse-REST-API-Key"] = dotenv.get("BACK4APPRESTAPIKEY");
+    dio.options.headers["Content-Type"] = dotenv.get("BACK4APPCONTENTAPI");
+    await dio.put("https://parseapi.back4app.com/classes/CepModel/$objectId", data: viaCepModel.toEndPoint());
+     
+  }
 
   Future<void> deleteCep(String cep) async{
     var dio = Dio();

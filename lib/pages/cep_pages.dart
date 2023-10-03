@@ -17,6 +17,8 @@ class _CepPagesState extends State<CepPages> {
   var viaCepModel = ViaCepModel();
   var cepList = ViaCepModelList([]);
   var cepController = TextEditingController(text: "");
+  var cepAtualController = TextEditingController(text: "");
+  var pesquisarController = TextEditingController(text: "");
   bool carregando = false; 
   Back4AppRepository back4appRepository = Back4AppRepository(); 
  
@@ -37,12 +39,6 @@ class _CepPagesState extends State<CepPages> {
     });
   }
 
- void limparTexto(){
-  viaCepModel.logradouro = "logradouro";
-  viaCepModel.bairro = "bairro";
-  viaCepModel.localidade = "localidade";
-  viaCepModel.uf = "estado";
- }
 
   bool verificarCep(ViaCepModel viaCepModel) {
   for (var cep in cepList.ceps) {
@@ -75,7 +71,7 @@ class _CepPagesState extends State<CepPages> {
                       if(viaCepModel.logradouro == null || viaCepModel.localidade == null || 
                       viaCepModel.bairro == null || viaCepModel.uf == null){
                         setState(() {
-                          limparTexto(); 
+                          viaCepModel.limparTexto();
                         });
                       }
                      } 
@@ -91,22 +87,30 @@ class _CepPagesState extends State<CepPages> {
                       children: [
                      TextButtonWidget(onPressed: () async {
                       cepController.clear(); 
-                        limparTexto();
+                        viaCepModel.limparTexto();
                       Navigator.pop(context); 
                     }, title: "Fechar", colorText: Colors.red, fontWeight: FontWeight.w600, tamanhoText: 18),
                     TextButtonWidget(onPressed: () async {
                       if(verificarCep(viaCepModel)){
                         cepController.clear(); 
-                        limparTexto(); 
+                        viaCepModel.limparTexto(); 
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cep já cadastrado", style: TextStyle(color: Colors.red),)));
                         Navigator.pop(context);
                         return; 
-                      } else{
-                        cepController.clear();
-                        limparTexto(); 
+                      }
+                      if(viaCepModel.verificarCampos()){
+                        cepController.clear(); 
+                        viaCepModel.limparTexto(); 
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cep incorreto", style: TextStyle(color: Colors.red),)));
+                        Navigator.pop(context);
+                        return; 
+                      } 
+                      else{
                         await back4appRepository.createCep(viaCepModel);
                         obterDados();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cadastrado com sucesso")));
+                        cepController.clear();
+                        viaCepModel.limparTexto(); 
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cadastrado com sucesso", style: TextStyle(color: Colors.green),)));
                         Navigator.pop(context);
                       }
                       setState(() {}); 
@@ -138,12 +142,77 @@ class _CepPagesState extends State<CepPages> {
               trailing: const Icon(
                 Icons.border_color
               ),
-              onTap: () {
-                
-              },
+            onTap: () async {
+              viaCepModel.cep = cep.cep;
+              viaCepModel.logradouro = cep.logradouro; 
+              viaCepModel.localidade = cep.localidade; 
+              viaCepModel.bairro = cep.bairro; 
+              viaCepModel.uf = cep.uf;  
+              // ignore: use_build_context_synchronously
+              showModalBottomSheet(context: context, builder: (context) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+                  child: Column(
+                    children: [
+                      TextFieldWidget(label: "Informe o novo CEP", controller: cepAtualController, 
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) async {
+                     var cep = value.toString().replaceAll(RegExp(r'[^0-9]'), ""); 
+                    if(cep.length == 8){
+                      viaCepModel = await viaCepRepository.obterCep(cepAtualController.text); 
+                      setState(() {});
+                     } 
+                    }), 
+                      TextFieldWidget(label: viaCepModel.logradouro ?? "logradouro", enabled: true), 
+                      TextFieldWidget(label: viaCepModel.localidade ?? "localidade", enabled: true), 
+                      TextFieldWidget(label: viaCepModel.bairro ?? "bairro", enabled: true), 
+                      TextFieldWidget(label: viaCepModel.uf ?? "estado", enabled: true), 
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            TextButtonWidget(onPressed: () async {
+                            cepAtualController.clear(); 
+                            viaCepModel.limparTexto();
+                            Navigator.pop(context); 
+                                          }, title: "Fechar", colorText: Colors.red, fontWeight: FontWeight.w600, tamanhoText: 18),
+                            TextButtonWidget(onPressed: () async {
+                            if(verificarCep(viaCepModel)){
+                              cepAtualController.clear(); 
+                              viaCepModel.limparTexto(); 
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cep já cadastrado", style: TextStyle(color: Colors.red),)));
+                              Navigator.pop(context);
+                              return; 
+                            }
+                            if(viaCepModel.verificarCampos()){
+                              cepAtualController.clear(); 
+                              viaCepModel.limparTexto(); 
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cep incorreto", style: TextStyle(color: Colors.red),)));
+                              Navigator.pop(context);
+                              return; 
+                            } 
+                            else{
+                              await back4appRepository.updatingCep(viaCepModel, cep.objectId!);
+                              obterDados();
+                              cepAtualController.clear();
+                              viaCepModel.limparTexto(); 
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Alterado com sucesso", style: TextStyle(color: Colors.green),)));
+                              Navigator.pop(context);
+                            }
+                            setState(() {}); 
+                                          }, title: "Atualizar", colorText: Colors.white, fontWeight: FontWeight.w600, tamanhoText: 18, backGroundColorButton: Colors.blue),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                );
+              },);
+            },
             ),
           ));
         }),
-      )));
+      )),
+    );
   }
 }
